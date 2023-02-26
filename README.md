@@ -1,4 +1,4 @@
-## Fast Audio transcribe using Openai's Whisper and Modal
+## Fast Audio/Video transcribe using Openai's Whisper and Modal
 
 ##### Powered by Modal.com for parallel processing on-demand, an hour audio file can be transcribed in ~1 minute.
 
@@ -6,7 +6,17 @@
 
 > “The Whisper architecture is a simple end-to-end approach, implemented as an encoder-decoder Transformer. Input audio is split into 30-second chunks, converted into a log-Mel spectrogram, and then passed into an encoder.” - Introducing Whisper
 
-![Transcription Flow](whisper-modal.png)
+![Transcription Flow](modal-vide-audio-transcribe.png)
+
+### Demo
+
+Audio Transcription
+
+https://user-images.githubusercontent.com/15852818/221420836-9daf7e89-dbc3-407b-8d49-88877cf52e2a.mp4
+
+Video Transcription
+
+https://user-images.githubusercontent.com/15852818/221420839-e5c91172-b6d9-40f7-806d-dc5122568de9.mp4
 
 ### How to use
 
@@ -29,10 +39,10 @@
    modal deploy api.main
    ```
 
-3. Transcribe your audio file using the following curl command. Replace the `your-modal-endpoint`, `your-audio-src-url`, and `title_slug` with your own.
+3. Transcribe your audio file using the following curl command. Replace the `your-modal-endpoint`, `your-audio-src-url`, `title_slug`, and `is_video`(for video transcribe) with your own.
 
    ```curl
-   curl --location --request POST 'your-modal-endpoint/api/transcribe?audio_url=your-audio-src-url&title_slug=your-amazing-title-slug'
+   curl --location --request POST 'your-modal-endpoint/api/transcribe?src_url=your-audio-src-url&title_slug=your-amazing-title-slug&is_video=false'
    ```
 
    Sample response:
