@@ -108,5 +108,5 @@ https://user-images.githubusercontent.com/15852818/221420839-e5c91172-b6d9-40f7-
 
 Resources:
 
-- https://modal.com/docs/guide/whisper-transcriber
+- https://modal.com/docs/guide/whisper-transcriber (most of the codes were recycled from here)
 - https://openai.com/blog/whisper/
