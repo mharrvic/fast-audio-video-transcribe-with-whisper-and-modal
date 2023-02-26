@@ -37,13 +37,13 @@ async def get_audio_info(title_slug: str):
 
 
 @web_app.post("/api/transcribe")
-async def transcribe_job(audio_url: str, title_slug: str):
+async def transcribe_job(src_url: str, title_slug: str, is_video: bool = False):
     from modal import container_app
 
     transcription_path = get_transcript_path(title_slug)
     if transcription_path.exists():
         logger.info(
-            f"Transcription already exists for '{title_slug}' with URL {audio_url}."
+            f"Transcription already exists for '{title_slug}' with URL {src_url}."
         )
         logger.info("Skipping transcription.")
         return {"call_id": "transcription_already_exists"}
@@ -64,7 +64,7 @@ async def transcribe_job(audio_url: str, title_slug: str):
     except KeyError:
         pass
 
-    call = process_audio.spawn(audio_url, title_slug)
+    call = process_audio.spawn(src_url, title_slug, is_video)
     container_app.in_progress[title_slug] = InProgressJob(
         call_id=call.object_id, start_time=now
     )
