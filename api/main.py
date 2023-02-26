@@ -11,7 +11,7 @@ from typing import Iterator, Tuple
 
 import modal
 
-from . import audio, config
+from . import audio, config, video
 
 logger = config.get_logger(__name__)
 volume = modal.SharedVolume().persist("dataset-cache-vol")
@@ -27,6 +27,7 @@ app_image = (
         "pandas",
         "loguru==0.6.0",
         "torchaudio==0.12.1",
+        "yt-dlp",
     )
     .apt_install("ffmpeg")
     .pip_install("ffmpeg-python")
@@ -194,12 +195,16 @@ def transcribe_audio(
     shared_volumes={config.CACHE_DIR: volume},
     timeout=900,
 )
-def process_audio(audio_url: str, title_slug: str):
+def process_audio(src_url: str, title_slug: str, is_video: bool):
     import dacite
     import whisper
+    import yt_dlp
     from modal import container_app
 
     destination_path = config.RAW_AUDIO_DIR / title_slug
+
+    # Video files are converted to mp3, so we need to pass the mp3 file path.
+    audio_filepath = f"{destination_path}.mp3" if is_video else destination_path
 
     try:
         transcription_path = get_transcript_path(title_slug)
@@ -212,16 +217,20 @@ def process_audio(audio_url: str, title_slug: str):
         config.RAW_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
         config.TRANSCRIPTIONS_DIR.mkdir(parents=True, exist_ok=True)
 
-        audio.store_original_audio(
-            url=audio_url,
-            destination=destination_path,
-        )
+        if is_video:
+            video.download_convert_video_to_audio(yt_dlp, src_url, destination_path)
+        else:
+            audio.store_original_audio(
+                url=src_url,
+                destination=destination_path,
+            )
 
         logger.info(
             f"Using the {model.name} model which has {model.params} parameters."
         )
+
         transcribe_audio.call(
-            audio_filepath=destination_path,
+            audio_filepath=audio_filepath,
             result_path=transcription_path,
             model=model,
         )
@@ -232,7 +241,7 @@ def process_audio(audio_url: str, title_slug: str):
     finally:
         del container_app.in_progress[title_slug]
         logger.info(f"Deleting the audio file in '{destination_path}'")
-        os.remove(destination_path)
+        os.remove(audio_filepath)
         logger.info(f"Deleted the audio file in '{destination_path}'")
 
     return title_slug
