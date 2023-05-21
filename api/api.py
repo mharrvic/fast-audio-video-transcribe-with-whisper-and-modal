@@ -37,7 +37,9 @@ async def get_audio_info(title_slug: str):
 
 
 @web_app.post("/api/transcribe")
-async def transcribe_job(src_url: str, title_slug: str, is_video: bool = False):
+async def transcribe_job(
+    src_url: str, title_slug: str, is_video: bool = False, password: str = None
+):
     from modal import container_app
 
     transcription_path = get_transcript_path(title_slug)
@@ -64,7 +66,7 @@ async def transcribe_job(src_url: str, title_slug: str, is_video: bool = False):
     except KeyError:
         pass
 
-    call = process_audio.spawn(src_url, title_slug, is_video)
+    call = process_audio.spawn(src_url, title_slug, is_video, password)
     container_app.in_progress[title_slug] = InProgressJob(
         call_id=call.object_id, start_time=now
     )

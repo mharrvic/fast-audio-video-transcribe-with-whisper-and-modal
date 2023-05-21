@@ -9,6 +9,7 @@ logger = config.get_logger(__name__)
 def download_convert_video_to_audio(
     yt_dlp,
     video_url: str,
+    password: str,
     destination_path: pathlib.Path,
 ) -> None:
     ydl_opts = {
@@ -19,6 +20,7 @@ def download_convert_video_to_audio(
                 "preferredcodec": "mp3",
             }
         ],
+        "videopassword": password,
         "outtmpl": f"{destination_path}.%(ext)s",
     }
     try:
