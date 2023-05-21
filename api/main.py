@@ -2,22 +2,20 @@
 Uses OpenAI's Whisper modal to do speech-to-text transcription
 of audio.
 """
-import dataclasses
-import datetime
 import json
 import os
 import pathlib
 from typing import Iterator, Tuple
 
-import modal
+from modal import Dict, Image, SharedVolume, Stub, asgi_app
 
 from . import audio, config, video
 
 logger = config.get_logger(__name__)
-volume = modal.SharedVolume().persist("dataset-cache-vol")
+volume = SharedVolume().persist("dataset-cache-vol")
 
 app_image = (
-    modal.Image.debian_slim()
+    Image.debian_slim()
     .pip_install(
         "https://github.com/openai/whisper/archive/9f70a352f9f8630ab3aa0d06af5cb9532bd8c21d.tar.gz",
         "dacite",
@@ -33,12 +31,12 @@ app_image = (
     .pip_install("ffmpeg-python")
 )
 
-stub = modal.Stub(
-    "whisper-audio-transcriber-api",
+stub = Stub(
+    "whisper-audio-video-transcriber-api-v2",
     image=app_image,
 )
 
-stub.in_progress = modal.Dict()
+stub.in_progress = Dict()
 
 
 def get_audio_metadata_path(audio_url: str, title_slug: str) -> pathlib.Path:
@@ -49,13 +47,12 @@ def get_transcript_path(title_slug: str) -> pathlib.Path:
     return config.TRANSCRIPTIONS_DIR / f"{title_slug}.json"
 
 
-@stub.asgi(
+@stub.function(
     shared_volumes={config.CACHE_DIR: volume},
-    keep_warm=True,
+    keep_warm=1,
 )
+@asgi_app()
 def fastapi_app():
-    import fastapi.staticfiles
-
     from .api import web_app
 
     return web_app
@@ -195,7 +192,7 @@ def transcribe_audio(
     shared_volumes={config.CACHE_DIR: volume},
     timeout=900,
 )
-def process_audio(src_url: str, title_slug: str, is_video: bool):
+def process_audio(src_url: str, title_slug: str, is_video: bool, password: str):
     import dacite
     import whisper
     import yt_dlp
@@ -218,7 +215,9 @@ def process_audio(src_url: str, title_slug: str, is_video: bool):
         config.TRANSCRIPTIONS_DIR.mkdir(parents=True, exist_ok=True)
 
         if is_video:
-            video.download_convert_video_to_audio(yt_dlp, src_url, destination_path)
+            video.download_convert_video_to_audio(
+                yt_dlp, src_url, password, destination_path
+            )
         else:
             audio.store_original_audio(
                 url=src_url,
@@ -245,35 +244,3 @@ def process_audio(src_url: str, title_slug: str, is_video: bool):
         logger.info(f"Deleted the audio file in '{destination_path}'")
 
     return title_slug
-
-
-@stub.local_entrypoint
-def audio_entrypoint(slug: str):
-    # To search for a audio, run:
-    # modal run api/main.py --name "search string"
-    transcription_path = get_transcript_path(slug)
-
-    if not transcription_path.exists():
-        return dict(message="transcription not yet available")
-
-    with open(transcription_path, "r") as f:
-        data = json.load(f)
-
-    return dict(
-        segments=coalesce_short_transcript_segments(data["segments"]),
-    )
-
-
-@stub.function
-def cli(slug: str):
-    transcription_path = get_transcript_path(slug)
-
-    if not transcription_path.exists():
-        return dict(message="transcription not yet available")
-
-    with open(transcription_path, "r") as f:
-        data = json.load(f)
-
-    return dict(
-        segments=coalesce_short_transcript_segments(data["segments"]),
-    )
