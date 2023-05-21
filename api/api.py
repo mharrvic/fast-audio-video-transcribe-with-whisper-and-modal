@@ -21,6 +21,16 @@ class InProgressJob(NamedTuple):
     start_time: int
 
 
+@web_app.delete("/api/audio/{title_slug}")
+async def delete_audio_info(title_slug: str):
+    transcription_path = get_transcript_path(title_slug)
+    if transcription_path.exists():
+        transcription_path.unlink()
+        return dict(message="transcription deleted")
+    else:
+        return dict(message="transcription not found")
+
+
 @web_app.get("/api/audio/{title_slug}")
 async def get_audio_info(title_slug: str):
     transcription_path = get_transcript_path(title_slug)
