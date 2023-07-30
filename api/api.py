@@ -1,13 +1,12 @@
-import asyncio
 import json
 import time
 from typing import List, NamedTuple
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 
 from . import config
 from .audio import coalesce_short_transcript_segments
-from .main import get_audio_metadata_path, get_transcript_path, process_audio
+from .main import get_transcript_path, process_audio
 
 logger = config.get_logger(__name__)
 web_app = FastAPI()
@@ -86,7 +85,7 @@ async def transcribe_job(
 
 @web_app.get("/api/status/{call_id}")
 async def poll_status(call_id: str):
-    from modal._call_graph import InputInfo, InputStatus
+    from modal.call_graph import InputInfo, InputStatus
     from modal.functions import FunctionCall
 
     function_call = FunctionCall.from_id(call_id)
