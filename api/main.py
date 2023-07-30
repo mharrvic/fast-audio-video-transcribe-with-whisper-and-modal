@@ -7,12 +7,12 @@ import os
 import pathlib
 from typing import Iterator, Tuple
 
-from modal import Dict, Image, SharedVolume, Stub, asgi_app
+from modal import Dict, Image, NetworkFileSystem, Stub, asgi_app
 
 from . import audio, config, video
 
 logger = config.get_logger(__name__)
-volume = SharedVolume().persist("dataset-cache-vol")
+volume = NetworkFileSystem.persisted("dataset-cache-vol")
 
 app_image = (
     Image.debian_slim()
@@ -36,7 +36,7 @@ stub = Stub(
     image=app_image,
 )
 
-stub.in_progress = Dict()
+stub.in_progress = Dict.new()
 
 
 def get_audio_metadata_path(audio_url: str, title_slug: str) -> pathlib.Path:
@@ -48,7 +48,7 @@ def get_transcript_path(title_slug: str) -> pathlib.Path:
 
 
 @stub.function(
-    shared_volumes={config.CACHE_DIR: volume},
+    network_file_systems={config.CACHE_DIR: volume},
     keep_warm=1,
 )
 @asgi_app()
@@ -111,7 +111,7 @@ def split_silences(
 
 @stub.function(
     image=app_image,
-    shared_volumes={config.CACHE_DIR: volume},
+    network_file_systems={config.CACHE_DIR: volume},
     cpu=2,
 )
 def transcribe_segment(
@@ -158,7 +158,7 @@ def transcribe_segment(
 
 @stub.function(
     image=app_image,
-    shared_volumes={config.CACHE_DIR: volume},
+    network_file_systems={config.CACHE_DIR: volume},
     timeout=900,
 )
 def transcribe_audio(
@@ -189,7 +189,7 @@ def transcribe_audio(
 
 @stub.function(
     image=app_image,
-    shared_volumes={config.CACHE_DIR: volume},
+    network_file_systems={config.CACHE_DIR: volume},
     timeout=900,
 )
 def process_audio(src_url: str, title_slug: str, is_video: bool, password: str):
